@@ -19,12 +19,6 @@ func (s *server) rootHandler() http.Handler {
 	})
 }
 
-func (s *server) infoHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		s.
-	})
-}
-
 func (s *server) loginHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.logEntry(r).Debug("calling loginHandler()")
@@ -37,7 +31,7 @@ func (s *server) loginHandler() http.Handler {
 		}
 
 		s.logEntry(r).Debugf("Getting user by username: %v", reqUser.Username)
-		u, err := s.getUserByUsername(reqUser.Username)
+		u, err := s.store.GetUserByUsername(reqUser.Username)
 		if err != nil {
 			switch err {
 			case sql.ErrNoRows:
@@ -54,34 +48,28 @@ func (s *server) loginHandler() http.Handler {
 		if err != nil {
 			s.logEntry(r).Infof("Failed login for user: %v", reqUser.Username)
 			s.jsonResponse(w, map[string]string{"error": "failed to authenticate"}, http.StatusUnauthorized)
-			return
 		}
 
 		// Setup claims
-		claims := jwtClaims{
-			u.ID,
-			jwt.StandardClaims{
-				Audience:  "api.jordandebeer.com",
-				ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
-				Issuer:    "authsrv",
-				IssuedAt:  time.Now().Unix(),
-			},
+		claims := jwt.MapClaims{
+			"id":  u.ID,
+			"aud": "api.jordandebeer.com",
+			"exp": time.Now().Add(time.Minute * 5).Unix(),
+			"iss": "authsrv",
+			"iat": time.Now().Unix(),
 		}
 
 		// Create token
-		token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
-
-		// Create private key
-		ss, err := token.SignedString(s.privKey)
+		token, err := SignJwt(claims, s.privKey)
 		if err != nil {
-			s.logEntry(r).Errorf("Error signing token: %v", err)
-			s.jsonResponse(w, map[string]string{"error": "internal Server Error"}, http.StatusInternalServerError)
+			s.log.Errorf("Error signing token. Err: %v", err)
+			s.jsonResponse(w, map[string]string{"error": "err"}, http.StatusInternalServerError)
 		}
 		s.logEntry(r).Infof("Logged in: %v", reqUser.Username)
 
-		m := map[string]interface{}{
+		m := map[string]string{
 			"username":   u.Username,
-			"access_key": ss,
+			"access_key": token,
 		}
 
 		s.jsonResponse(w, m, http.StatusOK)

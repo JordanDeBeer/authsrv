@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
@@ -18,18 +19,17 @@ var (
 )
 
 func main() {
-	db := initDb()
-	defer db.Close()
+	s := initUserStore()
 
-	logger := initLogger()
+	l := initLogger()
 
 	k, err := initKeys()
 	if err != nil {
 		log.Fatal("Could not get private key")
 	}
 
-	r := http.NewServeMux()
+	r := mux.NewRouter()
 
-	app := auth.New(r, db, logger, k)
-	log.Fatal(http.ListenAndServe(":8080", app.ApplyMw(r)))
+	auth.New(r, s, l, k)
+	log.Fatal(http.ListenAndServe(":8080", (r)))
 }

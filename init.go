@@ -1,6 +1,7 @@
 package main
 
 import (
+	"authsrv/auth"
 	"crypto/ecdsa"
 	"crypto/x509"
 	"database/sql"
@@ -13,13 +14,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func initDb() *sql.DB {
+func initUserStore() auth.UserStore {
 	dbinfo := fmt.Sprintf("host=%s user=%s password=%s sslmode=disable", dbHost, dbUser, dbPass)
 	db, err := sql.Open("postgres", dbinfo)
 	if err != nil {
 		log.Fatalf("Error in initDb(). No database connection. Error: %v", err)
 	}
-	return db
+	s := auth.NewPsqlUserStore(db)
+	return s
 }
 
 func initLogger() *logrus.Logger {
