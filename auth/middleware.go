@@ -7,10 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *server) ApplyMw(h http.Handler) http.Handler {
-	return s.requestIDMw(h)
-}
-
 func (s *server) AuthnMw(fn http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearerToken, err := GetBearerToken(r.Header.Get("authorization"))
@@ -19,7 +15,7 @@ func (s *server) AuthnMw(fn http.Handler) http.Handler {
 		}
 		_, err = VerifyJwt(bearerToken, s.privKey.Public())
 		if err != nil {
-			s.log.Errorf("Error verifying token: %v", err)
+			s.logEntry(r).Errorf("Error verifying token: %v", err)
 			s.jsonResponse(w, map[string]error{"error": err}, http.StatusForbidden)
 		}
 		s.log.Debugf("Valid token for user")
