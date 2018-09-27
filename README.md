@@ -7,11 +7,11 @@ This is a personal project I wrote to help myself learn about Go web development
 I don't recommend using this as-is in production, but maybe it can offer you some insights into your project.
 
 ## To-Do
-- [ ] Add refresh JWT tokens
+- [x] Add refresh JWT tokens
 - [ ] User management
-- [ ] Tests
-- [ ] Kubernetes resources
-- [ ] Use gorilla/mux
+- [-] Tests
+- [-] Kubernetes resources
+- [x] Use gorilla/mux
 - [ ] Metrics via Prometheus
 - [ ] CI/CD
 - [ ] Utilize Go modules (Waiting for Fedora 29 w/ go1.11)
