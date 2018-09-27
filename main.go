@@ -25,7 +25,7 @@ func main() {
 
 	k, err := initKeys()
 	if err != nil {
-		log.Fatal("Could not get private key")
+		log.Fatalf("Could not get private key. Error: %v", err)
 	}
 
 	r := mux.NewRouter()

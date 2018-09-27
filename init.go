@@ -43,7 +43,7 @@ func initLogger() *logrus.Logger {
 }
 
 func initKeys() (*ecdsa.PrivateKey, error) {
-	data, err := ioutil.ReadFile("/app/private.pem")
+	data, err := ioutil.ReadFile("/app/keys/private")
 	if err != nil {
 		return nil, fmt.Errorf("Error reading keyfile. Error: %v", err)
 	}
