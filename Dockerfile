@@ -4,10 +4,11 @@ RUN adduser -D appuser
 COPY . $GOPATH/src/authsrv/
 WORKDIR $GOPATH/src/authsrv/
 RUN go get -d -v
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/authsrv
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s -X main.version=$(git rev-parse HEAD)" -o /go/bin/authsrv
 
 FROM scratch
 COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /go/src/authsrv /app/
 COPY --from=builder /go/bin/authsrv /app/authsrv
 USER appuser
 

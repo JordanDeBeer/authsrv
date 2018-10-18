@@ -1,0 +1,9 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authsrv-deployment
+  namespace: authsrv-namespace
+  labels:
+    app: authsrv
+spec:
+  replicas: 3

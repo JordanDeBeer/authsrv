@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authsrv-configmap
+  labels:
+    app: authsrv
+  namespace: authsrv-namespace
+data:
+  log_level: info
+  db_user: "db"
+  db_host: "db"

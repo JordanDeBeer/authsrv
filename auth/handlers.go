@@ -4,10 +4,9 @@ package auth
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,35 +53,17 @@ func (s *server) loginHandler() http.Handler {
 			return
 		}
 
-		// Setup claims
-		access_claims := jwt.MapClaims{
-			"id":      u.ID,
-			"aud":     "api.jordandebeer.com",
-			"exp":     time.Now().Add(time.Minute * 5).Unix(),
-			"iss":     "authsrv",
-			"iat":     time.Now().Unix(),
-			"refresh": false,
-		}
-
-		refresh_claims := jwt.MapClaims{
-			"id":      u.ID,
-			"aud":     "api.jordandebeer.com",
-			"exp":     time.Now().Add(time.Hour * 24).Unix(),
-			"iss":     "authsrv",
-			"iat":     time.Now().Unix(),
-			"refresh": true,
-		}
-
 		// Create token
-		access_token, err := SignJwt(access_claims, s.privKey)
+		access_token, err := s.newAuthsrvToken("access", u)
 		if err != nil {
-			s.log.Errorf("Error signing access token. Err: %v", err)
+			s.log.Errorf("Error getting access token. Err: %v", err)
 			s.jsonResponse(w, map[string]string{"error": "err"}, http.StatusInternalServerError)
 			return
 		}
-		refresh_token, err := SignJwt(refresh_claims, s.privKey)
+
+		refresh_token, err := s.newAuthsrvToken("refresh", u)
 		if err != nil {
-			s.log.Errorf("Error signing refresh token. Err: %v", err)
+			s.log.Errorf("Error getting refresh token. Err: %v", err)
 			s.jsonResponse(w, map[string]string{"error": "err"}, http.StatusInternalServerError)
 			return
 		}
@@ -105,30 +86,37 @@ func (s *server) refreshHandler() http.Handler {
 		s.logEntry(r).Debug("calling refreshHandler()")
 		bearerToken, err := GetBearerToken(r.Header.Get("authorization"))
 		if err != nil {
+			s.logEntry(r).Errorf("Error getting token: %v", err)
 			s.jsonResponse(w, map[string]error{"error": err}, http.StatusForbidden)
 			return
 		}
 		token, err := VerifyJwt(bearerToken, s.privKey.Public())
-		if err != nil {
+		if err.Error() != "Token is not an access token" {
 			s.logEntry(r).Errorf("Error verifying token: %v", err)
 			s.jsonResponse(w, map[string]string{"error": "error verifying token"}, http.StatusForbidden)
 			return
 		}
-		if token["refresh"] != true {
-			s.logEntry(r).Error("Error verifying refresh token.  No refresh scope.")
+		if token.Type != "refresh" {
+			s.logEntry(r).Error("Error verifying refresh token.")
 			s.jsonResponse(w, map[string]string{"error": "invalid token"}, http.StatusForbidden)
 			return
 		}
-		access_claims := jwt.MapClaims{
-			"id":      token["id"],
-			"aud":     "api.jordandebeer.com",
-			"exp":     time.Now().Add(time.Minute * 5).Unix(),
-			"iss":     "authsrv",
-			"iat":     time.Now().Unix(),
-			"refresh": false,
+		fmt.Printf("%+v", token)
+
+		// check revocation
+		revoked, err := s.store.CheckTokenRevocation(token.Id)
+		if err != nil {
+			s.logEntry(r).Error("Error checking token revocation, %v", err)
+			s.jsonResponse(w, map[string]string{"error": "error checking token"}, http.StatusInternalServerError)
+		}
+		if revoked {
+			s.logEntry(r).Error("Revoked token")
+			s.jsonResponse(w, map[string]string{"error": "revoked token"}, http.StatusForbidden)
+			return
 		}
 
-		access_token, err := SignJwt(access_claims, s.privKey)
+		user, _ := s.store.GetUserByUID(token.UID)
+		access_token, _ := s.newAuthsrvToken("access", user)
 		m := map[string]string{
 			"access_token": access_token,
 		}

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authsrv-deployment
+  namespace: authsrv-namespace
+  labels:
+    app: authsrv
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authsrv
+  template:
+    metadata:
+      labels:
+        app: authsrv
+    spec:
+      containers:
+      - name: authsrv
+        image: 657070751326.dkr.ecr.us-east-1.amazonaws.com/authsrv:1.3
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+          - name: private-key
+            mountPath: "/app/keys"
+            readOnly: true
+        env:
+          - name: DB_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: authsrv-configmap
+                key: db_host
+          - name: DB_USER
+            valueFrom:
+              configMapKeyRef:
+                name: authsrv-configmap
+                key: db_user
+          - name: LOG_LEVEL
+            valueFrom:
+              configMapKeyRef:
+                name: authsrv-configmap
+                key: log_level
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+      volumes:
+      - name: private-key
+        secret:
+          secretName: authsrv-private-key
+

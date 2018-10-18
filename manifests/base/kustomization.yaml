@@ -1,0 +1,11 @@
+resources:
+- deployment.yaml
+- service.yaml
+- configmap.yaml
+- namespace.yaml
+
+secretGenerator:
+- name: authsrv-private-key
+  commands:
+    private: "cat private.key"
+  type: "Secret"

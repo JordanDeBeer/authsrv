@@ -11,12 +11,15 @@ func (s *server) AuthnMw(fn http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bearerToken, err := GetBearerToken(r.Header.Get("authorization"))
 		if err != nil {
-			s.jsonResponse(w, map[string]error{"error": err}, http.StatusForbidden)
+			s.logEntry(r).Errorf("Error getting authorization token: %v", err)
+			s.jsonResponse(w, map[string]string{"error": err.Error()}, http.StatusForbidden)
+			return
 		}
 		_, err = VerifyJwt(bearerToken, s.privKey.Public())
 		if err != nil {
 			s.logEntry(r).Errorf("Error verifying token: %v", err)
-			s.jsonResponse(w, map[string]error{"error": err}, http.StatusForbidden)
+			s.jsonResponse(w, map[string]string{"error": err.Error()}, http.StatusForbidden)
+			return
 		}
 		s.log.Debugf("Valid token for user")
 		fn.ServeHTTP(w, r)

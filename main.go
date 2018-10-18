@@ -2,9 +2,11 @@ package main
 
 import (
 	"authsrv/auth"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -12,6 +14,8 @@ import (
 
 // configuration data
 var (
+	version string
+
 	// postgres
 	dbHost = os.Getenv("DB_HOST")
 	dbUser = os.Getenv("DB_USER")
@@ -19,6 +23,8 @@ var (
 )
 
 func main() {
+	time.Sleep(2 * time.Second)
+	fmt.Println("Starting authsrv version", version)
 	s := initUserStore()
 
 	l := initLogger()

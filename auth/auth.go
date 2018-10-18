@@ -49,27 +49,22 @@ func GetBearerToken(header string) (string, error) {
 	return token[1], nil
 }
 
-func SignJwt(claims jwt.MapClaims, privKey *ecdsa.PrivateKey) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
-	ss, err := token.SignedString(privKey)
-	if err != nil {
-		return "", fmt.Errorf("Error signing key. Err: %v", err)
-	}
-	return ss, nil
-}
-
-func VerifyJwt(token string, pubKey crypto.PublicKey) (map[string]interface{}, error) {
-	jwToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+func VerifyJwt(token string, pubKey crypto.PublicKey) (*authsrvClaims, error) {
+	jwToken, err := jwt.ParseWithClaims(token, &authsrvClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("There was an error")
 		}
 		return pubKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return &authsrvClaims{}, err
 	}
 	if !jwToken.Valid {
-		return nil, fmt.Errorf("Invalid authorization token")
+		return &authsrvClaims{}, fmt.Errorf("Invalid authorization token")
 	}
-	return jwToken.Claims.(jwt.MapClaims), nil
+	if jwToken.Claims.(*authsrvClaims).Type != "access" {
+		return jwToken.Claims.(*authsrvClaims), fmt.Errorf("Token is not an access token")
+
+	}
+	return jwToken.Claims.(*authsrvClaims), nil
 }
